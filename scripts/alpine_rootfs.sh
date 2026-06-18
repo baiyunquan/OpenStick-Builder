@@ -2,10 +2,11 @@
 
 export CHROOT=${CHROOT=$(pwd)/rootfs}
 export HOST_NAME=${HOST_NAME=openstick-alpine}
-export RELEASE=${RELEASE=v3.20}
-export PMOS_RELEASE=${PMOS_RELEASE=v24.06}
+export RELEASE=${RELEASE=v3.23}
+export PMOS_RELEASE=${PMOS_RELEASE=v25.12}
 export MIRROR=${MIRROR=http://dl-cdn.alpinelinux.org/alpine}
 export PMOS_MIRROR=${PMOS_MIRROR=http://mirror.postmarketos.org/postmarketos}
+export APK_STATIC_URL=https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v3.0.6/x86_64/apk.static
 
 rm -rf ${CHROOT}
 
@@ -13,7 +14,7 @@ mkdir -p ${CHROOT}/etc/apk
 cat << EOF >  ${CHROOT}/etc/apk/repositories
 ${MIRROR}/${RELEASE}/main
 ${MIRROR}/${RELEASE}/community
-${PMOS_MIRROR}/${PMOS_RELEASE}
+@pmos ${PMOS_MIRROR}/${PMOS_RELEASE}
 EOF
 
 cp /etc/resolv.conf ${CHROOT}/etc/
@@ -21,32 +22,31 @@ cp /etc/resolv.conf ${CHROOT}/etc/
 mkdir -p ${CHROOT}/usr/bin
 cp $(which qemu-aarch64-static) ${CHROOT}/usr/bin
 
-wget https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v2.12.14/x86_64/apk.static
-chmod a+x apk.static
+[ -e apk.static ] || wget ${APK_STATIC_URL}; chmod a+x apk.static
 
 ./apk.static add -p ${CHROOT} --initdb -U --arch aarch64 --allow-untrusted alpine-base
-rm apk.static
 
 # install apps
 chroot ${CHROOT} ash -l -c "
-apk add --no-cache --allow-untrusted postmarketos-keys
-apk add --no-cache \
+apk add --allow-untrusted postmarketos-keys@pmos
+apk add \
     bridge-utils \
     chrony \
     dropbear \
     eudev \
     gadget-tool \
     iptables \
-    linux-postmarketos-qcom-msm8916 \
+    linux-postmarketos-qcom-msm8916@pmos \
     modemmanager \
-    msm-firmware-loader \
+    msm-firmware-loader@pmos \
     networkmanager-cli \
     networkmanager-dnsmasq \
     networkmanager-tui \
     networkmanager-wifi \
     networkmanager-wwan \
     openrc \
-    rmtfs \
+    qrtr-libs@pmos \
+    rmtfs@pmos \
     sudo \
     udev-init-scripts \
     udev-init-scripts-openrc \
@@ -54,12 +54,12 @@ apk add --no-cache \
     wireguard-tools-wg-quick \
     wpa_supplicant \
     shadow \
+    iw \
     wireless-regdb
 "
 # setup alpine
 chroot ${CHROOT} ash -l -c "
 echo user:1::::/home/user:/bin/ash | newusers
-apk del shadow
 
 rc-update add devfs sysinit
 rc-update add dmesg sysinit
@@ -79,6 +79,7 @@ rc-update add dropbear default
 rc-update add rmtfs default
 rc-update add modemmanager default
 rc-update add networkmanager default
+rc-update add wpa_supplicant boot
 "
 echo 'user ALL=(ALL:ALL) NOPASSWD: ALL' > ${CHROOT}/etc/sudoers.d/user
 
@@ -101,7 +102,6 @@ sed -i "/localhost/ s/$/ ${HOST_NAME}/" ${CHROOT}/etc/hosts
 # setup NetworkManager
 cp configs/*.nmconnection ${CHROOT}/etc/NetworkManager/system-connections
 chmod 0600 ${CHROOT}/etc/NetworkManager/system-connections/*
-sed -i '/\[main\]/a dns=dnsmasq' ${CHROOT}/etc/NetworkManager/NetworkManager.conf
 
 mkdir -p ${CHROOT}/boot/extlinux
 cp configs/extlinux.conf ${CHROOT}/boot/extlinux
@@ -116,6 +116,7 @@ echo "/dev/mmcblk0p14\t/boot\text2\tdefaults\t0 2" > ${CHROOT}/etc/fstab
 cp -a configs/templates ${CHROOT}/etc/gt
 
 # backup rootfs
+rm -f alpine_rootfs.tgz
 tar cpzf alpine_rootfs.tgz \
     --exclude="root/*" \
     --exclude="usr/bin/qemu-aarch64-static" \

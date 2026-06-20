@@ -85,7 +85,7 @@ echo 'user ALL=(ALL:ALL) NOPASSWD: ALL' > ${CHROOT}/etc/sudoers.d/user
 
 # add udev rules
 cat << EOF > ${CHROOT}/etc/udev/rules.d/10-udc.rules
-ACTION=="add", SUBSYSTEM=="udc", RUN+="/sbin/modprobe libcomposite", RUN+="/usr/bin/gt load rndis-os-desc.scheme rndis"
+ACTION=="add", SUBSYSTEM=="udc", RUN+="/sbin/modprobe libcomposite", RUN+="/usr/local/bin/setup_ncm_gadget.sh"
 EOF
 
 cat << EOF > ${CHROOT}/etc/udev/rules.d/99-nm-usb0.rules
@@ -112,8 +112,9 @@ cp dtbs/* ${CHROOT}/boot/dtbs/qcom
 # update fstab
 echo "/dev/mmcblk0p14\t/boot\text2\tdefaults\t0 2" > ${CHROOT}/etc/fstab
 
-# copy gadget-tool templates
+# copy gadget-tool templates and script
 cp -a configs/templates ${CHROOT}/etc/gt
+cp scripts/setup_ncm_gadget.sh ${CHROOT}/usr/local/bin
 
 # backup rootfs
 rm -f alpine_rootfs.tgz

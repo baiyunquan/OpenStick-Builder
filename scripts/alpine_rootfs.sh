@@ -2,7 +2,7 @@
 
 export CHROOT=${CHROOT=$(pwd)/rootfs}
 export HOST_NAME=${HOST_NAME=openstick-alpine}
-export RELEASE=${RELEASE=v3.23}
+export RELEASE=${RELEASE=v3.24}
 export PMOS_RELEASE=${PMOS_RELEASE=v25.12}
 export MIRROR=${MIRROR=http://dl-cdn.alpinelinux.org/alpine}
 export PMOS_MIRROR=${PMOS_MIRROR=http://mirror.postmarketos.org/postmarketos}
@@ -33,33 +33,50 @@ apk add \
     bridge-utils \
     chrony \
     dropbear \
+    dbus \
     eudev \
     gadget-tool \
     iptables \
     linux-postmarketos-qcom-msm8916@pmos \
     modemmanager \
     msm-firmware-loader@pmos \
-    networkmanager-cli \
-    networkmanager-dnsmasq \
-    networkmanager-tui \
-    networkmanager-wifi \
-    networkmanager-wwan \
     openrc \
-    qrtr-libs@pmos \
-    rmtfs@pmos \
+    rmtfs \
+    shadow \
     sudo \
     udev-init-scripts \
     udev-init-scripts-openrc \
     wireguard-tools \
     wireguard-tools-wg-quick \
-    wpa_supplicant \
-    shadow \
-    iw \
-    wireless-regdb
+    wireless-regdb \
+    iw
+
+# clear
+rm /etc/fstab
 "
+
+# extract NetworkManager from previous alpine version (v3.20)
+scripts/extract_networkmanager.sh
+
 # setup alpine
 chroot ${CHROOT} ash -l -c "
 echo user:1::::/home/user:/bin/ash | newusers
+
+# update users used by chrooted apps
+addgroup -S dnsmasq
+adduser -S -D -H -h /dev/null -s /sbin/nologin -G dnsmasq -g dnsmasq dnsmasq
+
+# sync
+ln /etc/group    /usr/local/etc
+ln /etc/passwd   /usr/local/etc
+ln /etc/hostname /usr/local/etc
+
+ln -sf /usr/local/etc/resolv.conf /etc
+
+# add symlinks
+for a in nm-online nmcli nmtui nmtui-connect nmtui-edit nmtui-hostname; do
+    ln -s /usr/local/bin/chroot.sh /usr/bin/\${a};
+done
 
 rc-update add devfs sysinit
 rc-update add dmesg sysinit
@@ -79,7 +96,8 @@ rc-update add dropbear default
 rc-update add rmtfs default
 rc-update add modemmanager default
 rc-update add networkmanager default
-rc-update add wpa_supplicant boot
+rc-update add networkmanager-dispatcher default
+rc-update add wpa_supplicant default
 "
 echo 'user ALL=(ALL:ALL) NOPASSWD: ALL' > ${CHROOT}/etc/sudoers.d/user
 
@@ -100,8 +118,9 @@ echo ${HOST_NAME} > ${CHROOT}/etc/hostname
 sed -i "/localhost/ s/$/ ${HOST_NAME}/" ${CHROOT}/etc/hosts
 
 # setup NetworkManager
-cp configs/*.nmconnection ${CHROOT}/etc/NetworkManager/system-connections
-chmod 0600 ${CHROOT}/etc/NetworkManager/system-connections/*
+cp configs/*.nmconnection ${CHROOT}/usr/local/etc/NetworkManager/system-connections
+chmod 0600 ${CHROOT}/usr/local/etc/NetworkManager/system-connections/*
+ln -s ../usr/local/etc/NetworkManager ${CHROOT}/etc/NetworkManager
 
 mkdir -p ${CHROOT}/boot/extlinux
 cp configs/extlinux.conf ${CHROOT}/boot/extlinux
@@ -110,7 +129,7 @@ cp configs/extlinux.conf ${CHROOT}/boot/extlinux
 cp dtbs/* ${CHROOT}/boot/dtbs/qcom
 
 # update fstab
-echo "/dev/mmcblk0p14\t/boot\text2\tdefaults\t0 2" > ${CHROOT}/etc/fstab
+echo "/dev/mmcblk0p14\t/boot\text2\tdefaults\t0 2" >> ${CHROOT}/etc/fstab
 
 # copy gadget-tool templates and script
 cp -a configs/templates ${CHROOT}/etc/gt
@@ -120,5 +139,6 @@ cp scripts/setup_ncm_gadget.sh ${CHROOT}/usr/local/bin
 rm -f alpine_rootfs.tgz
 tar cpzf alpine_rootfs.tgz \
     --exclude="root/*" \
+    --exclude="newroot" \
     --exclude="usr/bin/qemu-aarch64-static" \
     -C rootfs .

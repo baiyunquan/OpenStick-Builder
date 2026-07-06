@@ -92,7 +92,7 @@ jobs:
             mkdir -p "artifacts/export/$(dirname "$rel")"
             cp -L "$path" "artifacts/export/$rel"
           done < <(find "$PMB_EXPORT" -xtype f | sort)
-          find artifacts -type f -exec sha256sum {} + > artifacts/SHA256SUMS
+          find artifacts -type f ! -name SHA256SUMS -exec sha256sum {} + > artifacts/SHA256SUMS
           tar -C artifacts -czf postmarketos-zhihe-ufi103s-v05.tar.gz .
 
       - name: Upload artifacts

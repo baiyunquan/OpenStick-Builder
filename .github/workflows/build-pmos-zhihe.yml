@@ -43,7 +43,7 @@ jobs:
       - name: Configure pmbootstrap
         run: |
           mkdir -p "$PMB_WORK"
-          cat > "$HOME/.config/pmbootstrap.cfg" <<EOF
+          cat > "$HOME/.config/pmbootstrap_v3.cfg" <<EOF
           [pmbootstrap]
           aports = $PMB_APORTS
           build_default_device_arch = True
@@ -67,7 +67,7 @@ jobs:
 
           [mirrors]
           EOF
-          sed -i 's/^          //' "$HOME/.config/pmbootstrap.cfg"
+          sed -i 's/^          //' "$HOME/.config/pmbootstrap_v3.cfg"
           pmbootstrap --version
           pmbootstrap config device
           pmbootstrap config kernel
@@ -83,11 +83,11 @@ jobs:
       - name: Collect artifacts
         run: |
           mkdir -p artifacts/export
-          cp "$HOME/.config/pmbootstrap.cfg" artifacts/pmbootstrap.cfg
+          cp "$HOME/.config/pmbootstrap_v3.cfg" artifacts/pmbootstrap_v3.cfg
           pmbootstrap status > artifacts/pmbootstrap-status.txt
           find "$PMB_EXPORT" -maxdepth 1 -type f -printf '%f %s\n' | sort > artifacts/export-file-list.txt
           cp "$PMB_EXPORT"/* artifacts/export/
-          sha256sum artifacts/export/* artifacts/pmbootstrap.cfg artifacts/pmbootstrap-status.txt artifacts/export-file-list.txt > artifacts/SHA256SUMS
+          sha256sum artifacts/export/* artifacts/pmbootstrap_v3.cfg artifacts/pmbootstrap-status.txt artifacts/export-file-list.txt > artifacts/SHA256SUMS
           tar -C artifacts -czf postmarketos-zhihe-ufi103s-v05.tar.gz .
 
       - name: Upload artifacts

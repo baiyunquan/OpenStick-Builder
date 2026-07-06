@@ -1,0 +1,136 @@
+name: Build postmarketOS for Zhihe UFI103S (modem ready)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    env:
+      PMB_WORK: /home/runner/pmbootstrap-work
+      PMB_APORTS: /home/runner/pmaports
+      PMB_EXPORT: /tmp/postmarketOS-export
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            binfmt-support \
+            btrfs-progs \
+            e2fsprogs \
+            git \
+            kpartx \
+            multipath-tools \
+            openssl \
+            parted \
+            python3 \
+            qemu-user-static \
+            rsync \
+            tar \
+            util-linux
+
+      - name: Clone pmbootstrap and pmaports
+        run: |
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git "$HOME/pmbootstrap"
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git "$PMB_APORTS"
+          mkdir -p "$HOME/.local/bin" "$HOME/.config"
+          ln -sf "$HOME/pmbootstrap/pmbootstrap.py" "$HOME/.local/bin/pmbootstrap"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install bootloader build deps
+        run: |
+          sudo apt-get install -y gcc-arm-none-eabi binutils-aarch64-linux-gnu python3-cryptography device-tree-compiler
+
+      - name: Build bootloader (qhypstub + lk1st UFI001C)
+        run: |
+          git submodule update --init
+          make -C src/qhypstub CROSS_COMPILE=aarch64-linux-gnu-
+          echo 'DEFINES += USE_TARGET_HS200_CAPS=1' >> src/lk2nd/project/lk1st-msm8916.mk
+          make -C src/lk2nd LK2ND_BUNDLE_DTB="msm8916-512mb-mtp.dtb" LK2ND_COMPATIBLE="thwc,ufi001c" TOOLCHAIN_PREFIX=arm-none-eabi- lk1st-msm8916
+          mkdir -p files
+          python3 src/qtestsign/qtestsign.py hyp src/qhypstub/qhypstub.elf -o files/hyp.mbn
+          python3 src/qtestsign/qtestsign.py aboot src/lk2nd/build-lk1st-msm8916/emmc_appsboot.mbn -o files/aboot.mbn
+
+      - name: Download DragonBoard tz firmware
+        run: |
+          wget -q -O /tmp/db410c_fw.zip 'https://builds.96boards.org/dragonboard410c/linaro/rescue/17.09/dragonboard410c_bootloader_emmc_android-88.zip'
+          unzip -o -j -d /tmp/db410c_fw /tmp/db410c_fw.zip 'tz.mbn'
+          cp /tmp/db410c_fw/tz.mbn files/
+          ls -la files/
+
+      - name: Configure pmbootstrap
+        run: |
+          mkdir -p "$PMB_WORK"
+          printf '8\n' > "$PMB_WORK/version"
+          cat > "$HOME/.config/pmbootstrap_v3.cfg" <<EOF
+          [pmbootstrap]
+          aports = $PMB_APORTS
+          build_default_device_arch = True
+          build_pkgs_on_install = True
+          ccache_size = 5G
+          device = zhihe-generic
+          extra_packages = device-zhihe-generic-nonfree-firmware,soc-qcom-msm8916-rproc,qmi-utils,qrtr,qrtr-tools,modemmanager,modemmanager-openrc,iw,wpa_supplicant,wireless-regdb
+          hostname = ufi103s-v05
+          is_default_channel = False
+          jobs = 4
+          kernel = ufi001c
+          locale = C.UTF-8
+          ssh_keys = False
+          sudo_timer = False
+          timezone = Asia/Shanghai
+          ui = console
+          user = user
+          work = $PMB_WORK
+
+          [providers]
+
+          [mirrors]
+          EOF
+          sed -i 's/^          //' "$HOME/.config/pmbootstrap_v3.cfg"
+          pmbootstrap --version
+          pmbootstrap config device
+          pmbootstrap config kernel
+          pmbootstrap config ui
+          pmbootstrap config extra_packages
+          pmbootstrap status || true
+
+      - name: Build split postmarketOS image
+        run: |
+          pmbootstrap install --split --filesystem btrfs --password 147147
+          pmbootstrap export
+
+      - name: Generate SIM DTB variants
+        run: |
+          mkdir -p artifacts/dtbs/variants artifacts/tools
+          chmod +x scripts/make_zhihe_dtb_variants.sh helpers/ufi103s-select-sim-slot.sh
+          ./scripts/make_zhihe_dtb_variants.sh "$PMB_EXPORT/dtbs/msm8916-thwc-ufi001c.dtb" artifacts/dtbs/variants
+          cp helpers/ufi103s-select-sim-slot.sh artifacts/tools/
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts/export
+          cp "$HOME/.config/pmbootstrap_v3.cfg" artifacts/pmbootstrap_v3.cfg
+          pmbootstrap status > artifacts/pmbootstrap-status.txt
+          find "$PMB_EXPORT" -maxdepth 1 -type f -printf '%f %s\n' | sort > artifacts/export-file-list.txt
+          cp files/* artifacts/
+          cp -rL "$PMB_EXPORT/dtbs" artifacts/dtbs/base
+          while IFS= read -r path; do
+            rel="${path#$PMB_EXPORT/}"
+            mkdir -p "artifacts/export/$(dirname "$rel")"
+            cp -L "$path" "artifacts/export/$rel"
+          done < <(find "$PMB_EXPORT" -xtype f | sort)
+          find artifacts -type f ! -name SHA256SUMS -exec sha256sum {} + > artifacts/SHA256SUMS
+          tar -C artifacts -czf postmarketos-zhihe-ufi103s-v05-modem.tar.gz .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: postmarketos-zhihe-ufi103s-v05-modem
+          path: postmarketos-zhihe-ufi103s-v05-modem.tar.gz

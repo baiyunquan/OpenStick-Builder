@@ -40,6 +40,28 @@ jobs:
           ln -sf "$HOME/pmbootstrap/pmbootstrap.py" "$HOME/.local/bin/pmbootstrap"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      - name: Install bootloader build deps
+        run: |
+          sudo apt-get install -y gcc-arm-none-eabi binutils-aarch64-linux-gnu python3-cryptography
+
+      - name: Build bootloader (qhypstub + lk1st UFI001C)
+        run: |
+          git submodule update --init
+          make -C src/qhypstub CROSS_COMPILE=aarch64-linux-gnu-
+          echo 'DEFINES += USE_TARGET_HS200_CAPS=1' >> src/lk2nd/project/lk1st-msm8916.mk
+          make -C src/lk2nd LK2ND_BUNDLE_DTB="msm8916-512mb-mtp.dtb" LK2ND_COMPATIBLE="thwc,ufi001c" TOOLCHAIN_PREFIX=arm-none-eabi- lk1st-msm8916
+          mkdir -p files
+          python3 src/qtestsign/qtestsign.py hyp src/qhypstub/qhypstub.elf -o files/hyp.mbn
+          python3 src/qtestsign/qtestsign.py aboot src/lk2nd/build-lk1st-msm8916/emmc_appsboot.mbn -o files/aboot.mbn
+
+      - name: Download DragonBoard tz firmware
+        run: |
+          wget -q -O /tmp/db410c_fw.zip 'http://releases.linaro.org/96boards/dragonboard410c/linaro/rescue/17.09/dragonboard410c_bootloader_emmc_android-88.zip'
+          unzip -o -j -d /tmp/db410c_fw /tmp/db410c_fw.zip \
+            'dragonboard410c_bootloader_emmc_android-88/tz.mbn'
+          cp /tmp/db410c_fw/tz.mbn files/
+          ls -la files/
+
       - name: Configure pmbootstrap
         run: |
           mkdir -p "$PMB_WORK"
@@ -87,6 +109,8 @@ jobs:
           cp "$HOME/.config/pmbootstrap_v3.cfg" artifacts/pmbootstrap_v3.cfg
           pmbootstrap status > artifacts/pmbootstrap-status.txt
           find "$PMB_EXPORT" -maxdepth 1 -type f -printf '%f %s\n' | sort > artifacts/export-file-list.txt
+          cp files/* artifacts/
+          cp -rL "$PMB_EXPORT/dtbs" artifacts/dtbs/
           while IFS= read -r path; do
             rel="${path#$PMB_EXPORT/}"
             mkdir -p "artifacts/export/$(dirname "$rel")"

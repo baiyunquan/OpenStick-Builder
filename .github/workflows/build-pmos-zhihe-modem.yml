@@ -76,7 +76,7 @@ jobs:
           build_pkgs_on_install = True
           ccache_size = 5G
           device = zhihe-generic
-          extra_packages = device-zhihe-generic-nonfree-firmware,soc-qcom-msm8916-rproc,qmi-utils,qrtr,qrtr-tools,modemmanager,modemmanager-openrc,iw,wpa_supplicant,wireless-regdb
+          extra_packages = device-zhihe-generic-nonfree-firmware,soc-qcom-msm8916-rproc,qmi-utils,qrtr,modemmanager,iw,wpa_supplicant,wireless-regdb
           hostname = ufi103s-v05
           is_default_channel = False
           jobs = 4

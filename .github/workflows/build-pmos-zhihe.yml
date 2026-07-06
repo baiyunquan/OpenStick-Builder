@@ -43,6 +43,7 @@ jobs:
       - name: Configure pmbootstrap
         run: |
           mkdir -p "$PMB_WORK"
+          printf '8\n' > "$PMB_WORK/version"
           cat > "$HOME/.config/pmbootstrap_v3.cfg" <<EOF
           [pmbootstrap]
           aports = $PMB_APORTS

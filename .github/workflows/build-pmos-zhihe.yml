@@ -46,7 +46,7 @@ jobs:
 
       - name: Install bootloader build deps
         run: |
-          sudo apt-get install -y gcc-arm-none-eabi binutils-aarch64-linux-gnu python3-cryptography
+          sudo apt-get install -y gcc-arm-none-eabi binutils-aarch64-linux-gnu python3-cryptography device-tree-compiler
 
       - name: Build bootloader (qhypstub + lk1st UFI001C)
         run: |

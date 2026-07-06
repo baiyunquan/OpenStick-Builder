@@ -87,7 +87,7 @@ jobs:
           cp "$HOME/.config/pmbootstrap_v3.cfg" artifacts/pmbootstrap_v3.cfg
           pmbootstrap status > artifacts/pmbootstrap-status.txt
           find "$PMB_EXPORT" -maxdepth 1 -type f -printf '%f %s\n' | sort > artifacts/export-file-list.txt
-          cp -a "$PMB_EXPORT"/. artifacts/export/
+          cp -aL "$PMB_EXPORT"/. artifacts/export/
           find artifacts -type f -exec sha256sum {} + > artifacts/SHA256SUMS
           tar -C artifacts -czf postmarketos-zhihe-ufi103s-v05.tar.gz .
 

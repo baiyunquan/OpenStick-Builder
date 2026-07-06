@@ -1,0 +1,97 @@
+name: Build postmarketOS for Zhihe UFI103S
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    env:
+      PMB_WORK: /home/runner/pmbootstrap-work
+      PMB_APORTS: /home/runner/pmaports
+      PMB_EXPORT: /tmp/postmarketOS-export
+
+    steps:
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            binfmt-support \
+            btrfs-progs \
+            e2fsprogs \
+            git \
+            kpartx \
+            multipath-tools \
+            openssl \
+            parted \
+            python3 \
+            qemu-user-static \
+            rsync \
+            tar \
+            util-linux
+
+      - name: Clone pmbootstrap and pmaports
+        run: |
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git "$HOME/pmbootstrap"
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git "$PMB_APORTS"
+          mkdir -p "$HOME/.local/bin" "$HOME/.config"
+          ln -sf "$HOME/pmbootstrap/pmbootstrap.py" "$HOME/.local/bin/pmbootstrap"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Configure pmbootstrap
+        run: |
+          mkdir -p "$PMB_WORK"
+          cat > "$HOME/.config/pmbootstrap.cfg" <<EOF
+          [pmbootstrap]
+          aports = $PMB_APORTS
+          build_default_device_arch = True
+          build_pkgs_on_install = True
+          ccache_size = 5G
+          device = zhihe-generic
+          extra_packages = device-zhihe-generic-nonfree-firmware,soc-qcom-msm8916-rproc,iw,wpa_supplicant,wireless-regdb
+          hostname = ufi103s-v05
+          is_default_channel = False
+          jobs = 4
+          kernel = ufi001c
+          locale = C.UTF-8
+          ssh_keys = False
+          sudo_timer = False
+          timezone = Asia/Shanghai
+          ui = none
+          user = user
+          work = $PMB_WORK
+
+          [providers]
+
+          [mirrors]
+          EOF
+          sed -i 's/^          //' "$HOME/.config/pmbootstrap.cfg"
+          pmbootstrap --version
+          pmbootstrap config device
+          pmbootstrap config kernel
+          pmbootstrap config ui
+          pmbootstrap config extra_packages
+          pmbootstrap status || true
+
+      - name: Build split postmarketOS image
+        run: |
+          pmbootstrap install --split --filesystem btrfs --password 147147
+          pmbootstrap export
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts/export
+          cp "$HOME/.config/pmbootstrap.cfg" artifacts/pmbootstrap.cfg
+          pmbootstrap status > artifacts/pmbootstrap-status.txt
+          find "$PMB_EXPORT" -maxdepth 1 -type f -printf '%f %s\n' | sort > artifacts/export-file-list.txt
+          cp "$PMB_EXPORT"/* artifacts/export/
+          sha256sum artifacts/export/* artifacts/pmbootstrap.cfg artifacts/pmbootstrap-status.txt artifacts/export-file-list.txt > artifacts/SHA256SUMS
+          tar -C artifacts -czf postmarketos-zhihe-ufi103s-v05.tar.gz .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: postmarketos-zhihe-ufi103s-v05
+          path: postmarketos-zhihe-ufi103s-v05.tar.gz

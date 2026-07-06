@@ -60,9 +60,8 @@ jobs:
 
       - name: Download DragonBoard tz firmware
         run: |
-          wget -q -O /tmp/db410c_fw.zip 'https://storage.lavacloud.io/artifacts/dragonboard-410c/dragonboard-410c-bootloader-emmc-linux-176.zip'
-          unzip -o -j -d /tmp/db410c_fw /tmp/db410c_fw.zip \
-            'dragonboard-410c-bootloader-emmc-linux-176/tz.mbn'
+          wget -q -O /tmp/db410c_fw.zip 'https://builds.96boards.org/dragonboard410c/linaro/rescue/17.09/dragonboard410c_bootloader_emmc_android-88.zip'
+          unzip -o -j -d /tmp/db410c_fw /tmp/db410c_fw.zip 'tz.mbn'
           cp /tmp/db410c_fw/tz.mbn files/
           ls -la files/
 

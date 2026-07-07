@@ -1,0 +1,51 @@
+name: Build FY_UZ801_V2.1 Debian 13 Full Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo sh -e scripts/install_deps.sh
+          sudo apt-get update
+          sudo apt-get install -y gdisk mkbootimg
+
+      - name: Build hyp and aboot firmware
+        run: sudo sh -e scripts/build_hyp_aboot.sh
+
+      - name: Extract MSM8916 firmware
+        run: sudo sh -e scripts/extract_fw.sh
+
+      - name: Create trixie rootfs
+        run: sudo env RELEASE=trixie HOST_NAME=openstick-debian-uz801v21 sh -e scripts/debootstrap.sh
+
+      - name: Build gadget-tool
+        run: sudo sh -e scripts/build_gt.sh
+
+      - name: Build FY_UZ801_V2.1 full image
+        run: sudo env IMAGE_BASENAME=uz801_v2.1_debian13_trixie sh -e scripts/build_fullimg_uz801_v21.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: uz801-v2.1-debian13-trixie-fullimg
+          path: |
+            files/uz801_v2.1_debian13_trixie.img.xz
+            files/uz801_v2.1_debian13_trixie.img
+            files/uz801_v2.1_debian13_trixie_boot.img
+            files/uz801_v2.1_debian13_trixie_rootfs.img
+            files/uz801_v2.1_debian13_trixie_gpt.txt
+            files/uz801_v2.1_debian13_trixie_SHA256SUMS
+            files/aboot.mbn
+            files/hyp.mbn
+            files/rpm.mbn
+            files/sbl1.mbn
+            files/tz.mbn

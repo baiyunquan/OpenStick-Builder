@@ -74,6 +74,7 @@ ROOTFS_SIZE=6909919
 ROOTFS_PARTUUID=A7AB80E8-E9D1-E8CD-F157-93F69B1D141E
 CMDLINE="earlycon root=PARTUUID=a7ab80e8-e9d1-e8cd-f157-93f69b1d141e no_framebuffer=true rw"
 IMAGE_BASENAME=${IMAGE_BASENAME:-uz801_v2.1_debian13_trixie}
+BOOT_IMAGE_OVERRIDE=${BOOT_IMAGE_OVERRIDE=}
 
 BOOT_RAW="$TMPDIR/boot.img"
 ROOTFS_RAW="$TMPDIR/rootfs.img"
@@ -85,30 +86,35 @@ GPT_TXT="files/${IMAGE_BASENAME}_gpt.txt"
 mkdir -p "$TMPDIR/rootfs"
 tar xpf rootfs.tgz -C "$TMPDIR/rootfs"
 
-# Create Android boot.img using the kernel and initramfs shipped in the rootfs.
-KERNEL=$(find "$TMPDIR/rootfs/boot" -maxdepth 1 -type f -name 'vmlinuz*' | head -n 1)
-INITRAMFS=$(find "$TMPDIR/rootfs/boot" -maxdepth 1 -type f -name 'initramfs*' | head -n 1)
+if [ -n "$BOOT_IMAGE_OVERRIDE" ]; then
+	need_file "$BOOT_IMAGE_OVERRIDE"
+	cp "$BOOT_IMAGE_OVERRIDE" "$BOOT_RAW"
+else
+	# Create Android boot.img using the kernel and initramfs shipped in the rootfs.
+	KERNEL=$(find "$TMPDIR/rootfs/boot" -maxdepth 1 -type f -name 'vmlinuz*' | head -n 1)
+	INITRAMFS=$(find "$TMPDIR/rootfs/boot" -maxdepth 1 -type f -name 'initramfs*' | head -n 1)
 
-[ -n "$KERNEL" ] || {
-	echo "Unable to find kernel under rootfs /boot" >&2
-	exit 1
-}
-[ -n "$INITRAMFS" ] || {
-	echo "Unable to find initramfs under rootfs /boot" >&2
-	exit 1
-}
+	[ -n "$KERNEL" ] || {
+		echo "Unable to find kernel under rootfs /boot" >&2
+		exit 1
+	}
+	[ -n "$INITRAMFS" ] || {
+		echo "Unable to find initramfs under rootfs /boot" >&2
+		exit 1
+	}
 
-mkbootimg \
-	--kernel "$KERNEL" \
-	--ramdisk "$INITRAMFS" \
-	--base 0x80000000 \
-	--kernel_offset 0x00080000 \
-	--ramdisk_offset 0x02000000 \
-	--second_offset 0x00f00000 \
-	--tags_offset 0x01e00000 \
-	--pagesize 2048 \
-	--cmdline "$CMDLINE" \
-	--output "$BOOT_RAW"
+	mkbootimg \
+		--kernel "$KERNEL" \
+		--ramdisk "$INITRAMFS" \
+		--base 0x80000000 \
+		--kernel_offset 0x00080000 \
+		--ramdisk_offset 0x02000000 \
+		--second_offset 0x00f00000 \
+		--tags_offset 0x01e00000 \
+		--pagesize 2048 \
+		--cmdline "$CMDLINE" \
+		--output "$BOOT_RAW"
+fi
 
 truncate -s $((BOOT_SIZE * 512)) "$BOOT_RAW"
 

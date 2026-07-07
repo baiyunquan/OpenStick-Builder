@@ -38,13 +38,13 @@ dd if=${TMPDIR}/gpt.img of=files/gpt_both0.bin bs=512 count=34
 dd if=${TMPDIR}/gpt.img bs=512 skip=2 count=32 >> files/gpt_both0.bin
 dd if=${TMPDIR}/gpt.img bs=512 skip=350241 >> files/gpt_both0.bin
 
-# extract Qualcom firmware
-wget -P ${TMPDIR} http://releases.linaro.org/96boards/dragonboard410c/linaro/rescue/21.12/dragonboard-410c-bootloader-emmc-linux-176.zip
+# extract Qualcomm firmware
+wget -P ${TMPDIR} https://builds.96boards.org/dragonboard410c/linaro/rescue/20.07/dragonboard-410c-bootloader-emmc-linux-145.zip
 
-unzip -o -j -d files/ ${TMPDIR}/dragonboard-410c-bootloader-emmc-linux-176.zip \
-    dragonboard-410c-bootloader-emmc-linux-176/rpm.mbn \
-    dragonboard-410c-bootloader-emmc-linux-176/sbl1.mbn \
-    dragonboard-410c-bootloader-emmc-linux-176/tz.mbn
+unzip -o -j -d files/ ${TMPDIR}/dragonboard-410c-bootloader-emmc-linux-145.zip \
+    dragonboard-410c-bootloader-emmc-linux-145/rpm.mbn \
+    dragonboard-410c-bootloader-emmc-linux-145/sbl1.mbn \
+    dragonboard-410c-bootloader-emmc-linux-145/tz.mbn
 
 cleanup() {
     rm -rf ${TMPDIR}

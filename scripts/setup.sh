@@ -16,6 +16,7 @@ apt install -qqy --no-install-recommends \
     bridge-utils \
     dnsmasq \
     hostapd \
+    initramfs-tools \
     iptables \
     libconfig11 \
     locales \

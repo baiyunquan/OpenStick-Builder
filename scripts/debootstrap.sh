@@ -58,6 +58,12 @@ EOF
 wget -O - http://mirror.postmarketos.org/postmarketos/v24.06/aarch64/linux-postmarketos-qcom-msm8916-6.6-r5.apk \
     | tar xkzf - -C ${CHROOT} --exclude=.PKGINFO --exclude=.SIGN* 2>/dev/null
 
+# generate initramfs for the installed kernel
+mount -t proc proc ${CHROOT}/proc/
+KERNEL_VER=$(ls ${CHROOT}/lib/modules/ | head -n 1)
+chroot ${CHROOT} qemu-aarch64-static /usr/sbin/update-initramfs -c -k "${KERNEL_VER}"
+umount ${CHROOT}/proc/
+
 mkdir -p ${CHROOT}/boot/extlinux
 cp configs/extlinux.conf ${CHROOT}/boot/extlinux
 

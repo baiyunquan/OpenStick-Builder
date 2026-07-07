@@ -59,8 +59,9 @@ wget -O - http://mirror.postmarketos.org/postmarketos/v24.06/aarch64/linux-postm
     | tar xkzf - -C ${CHROOT} --exclude=.PKGINFO --exclude=.SIGN* 2>/dev/null
 
 # generate initramfs for the installed kernel
-mount -t proc proc ${CHROOT}/proc/
+mount -t proc proc ${CHROOT}/proc/ || { echo "Failed to mount proc in chroot" >&2; exit 1; }
 KERNEL_VER=$(ls ${CHROOT}/lib/modules/ | head -n 1)
+[ -n "${KERNEL_VER}" ] || { echo "No kernel modules found in ${CHROOT}/lib/modules/" >&2; umount ${CHROOT}/proc/; exit 1; }
 chroot ${CHROOT} qemu-aarch64-static /usr/sbin/update-initramfs -c -k "${KERNEL_VER}"
 umount ${CHROOT}/proc/
 

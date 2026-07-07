@@ -66,7 +66,14 @@ if [ -z "${KERNEL_VER}" ]; then
     umount ${CHROOT}/proc/
     exit 1
 fi
-chroot ${CHROOT} qemu-aarch64-static /usr/sbin/update-initramfs -c -k "${KERNEL_VER}"
+case "${KERNEL_VER}" in
+    *[!a-zA-Z0-9._-]*)
+        echo "Unexpected characters in kernel version: ${KERNEL_VER}" >&2
+        umount ${CHROOT}/proc/
+        exit 1
+        ;;
+esac
+chroot ${CHROOT} qemu-aarch64-static /usr/sbin/update-initramfs -c -k "${KERNEL_VER}" || { umount ${CHROOT}/proc/; exit 1; }
 umount ${CHROOT}/proc/
 
 mkdir -p ${CHROOT}/boot/extlinux

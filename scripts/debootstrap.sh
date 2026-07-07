@@ -3,6 +3,7 @@
 CHROOT=${CHROOT=$(pwd)/rootfs}
 RELEASE=${RELEASE=stable}
 HOST_NAME=${HOST_NAME=openstick-debian}
+KERNEL_SOURCE=${KERNEL_SOURCE=pmos}
 
 rm -rf ${CHROOT}
 
@@ -54,15 +55,18 @@ cat << EOF > ${CHROOT}/etc/udev/rules.d/99-nm-usb0.rules
 SUBSYSTEM=="net", ACTION=="add|change|move", ENV{DEVTYPE}=="gadget", ENV{NM_UNMANAGED}="0"
 EOF
 
-# install kernel
-wget -O - http://mirror.postmarketos.org/postmarketos/v24.06/aarch64/linux-postmarketos-qcom-msm8916-6.6-r5.apk \
-    | tar xkzf - -C ${CHROOT} --exclude=.PKGINFO --exclude=.SIGN* 2>/dev/null
+if [ "${KERNEL_SOURCE}" = "pmos" ]; then
+    # install kernel
+    wget -O - http://mirror.postmarketos.org/postmarketos/v24.06/aarch64/linux-postmarketos-qcom-msm8916-6.6-r5.apk \
+        | tar xkzf - -C ${CHROOT} --exclude=.PKGINFO --exclude=.SIGN* 2>/dev/null
+fi
 
 mkdir -p ${CHROOT}/boot/extlinux
 cp configs/extlinux.conf ${CHROOT}/boot/extlinux
 
 # copy custom dtb's
 cp dtbs/* ${CHROOT}/boot/dtbs/qcom
+ln -sfn boot/dtbs ${CHROOT}/dtbs
 
 # create missing directory
 mkdir -p ${CHROOT}/lib/firmware/msm-firmware-loader

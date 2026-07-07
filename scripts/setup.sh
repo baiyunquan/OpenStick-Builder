@@ -14,9 +14,12 @@ apt upgrade -qqy
 apt autoremove -qqy
 apt install -qqy --no-install-recommends \
     bridge-utils \
+    cpio \
     dnsmasq \
     hostapd \
+    initramfs-tools \
     iptables \
+    kmod \
     libconfig11 \
     locales \
     modemmanager \

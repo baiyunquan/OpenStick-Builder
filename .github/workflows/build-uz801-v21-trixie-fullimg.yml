@@ -25,7 +25,22 @@ jobs:
         run: sudo sh -e scripts/extract_fw.sh
 
       - name: Create trixie rootfs
-        run: sudo env RELEASE=trixie HOST_NAME=openstick-debian-uz801v21 sh -e scripts/debootstrap.sh
+        run: sudo env RELEASE=trixie HOST_NAME=openstick-debian-uz801v21 KERNEL_SOURCE=none sh -e scripts/debootstrap.sh
+
+      - name: Download msm8916-mainline kernel artifacts
+        run: |
+          rm -rf kernel-artifacts
+          mkdir -p kernel-artifacts
+          sudo env \
+            GH_TOKEN="${{ github.token }}" \
+            gh run download 24350011360 -R msm8916-mainline/linux -D kernel-artifacts
+
+      - name: Install msm8916-mainline kernel artifacts
+        run: |
+          sudo env \
+            ARTIFACTS_DIR="${{ github.workspace }}/kernel-artifacts" \
+            DTB_BASENAME=msm8916-yiming-uz801v3.dtb \
+            sh -e scripts/install_kernel_artifact.sh
 
       - name: Build gadget-tool
         run: sudo sh -e scripts/build_gt.sh
@@ -44,6 +59,7 @@ jobs:
             files/uz801_v2.1_debian13_trixie_rootfs.img
             files/uz801_v2.1_debian13_trixie_gpt.txt
             files/uz801_v2.1_debian13_trixie_SHA256SUMS
+            files/kernel-release.txt
             files/aboot.mbn
             files/hyp.mbn
             files/rpm.mbn

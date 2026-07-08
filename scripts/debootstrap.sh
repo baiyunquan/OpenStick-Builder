@@ -4,6 +4,7 @@ CHROOT=${CHROOT=$(pwd)/rootfs}
 RELEASE=${RELEASE=stable}
 HOST_NAME=${HOST_NAME=openstick-debian}
 KERNEL_SOURCE=${KERNEL_SOURCE=pmos}
+PMOS_KERNEL_APK_URL=${PMOS_KERNEL_APK_URL=https://mirrors.aliyun.com/postmarketOS/v25.12/aarch64/linux-postmarketos-qcom-msm8916-6.12.1-r2.apk}
 
 rm -rf ${CHROOT}
 
@@ -57,8 +58,27 @@ EOF
 
 if [ "${KERNEL_SOURCE}" = "pmos" ]; then
     # install kernel
-    wget -O - http://mirror.postmarketos.org/postmarketos/v24.06/aarch64/linux-postmarketos-qcom-msm8916-6.6-r5.apk \
+    wget -O - "${PMOS_KERNEL_APK_URL}" \
         | tar xkzf - -C ${CHROOT} --exclude=.PKGINFO --exclude=.SIGN* 2>/dev/null
+
+    # Normalize kernel/initramfs names so later build steps and extlinux can
+    # reliably find them even if the package naming changes across releases.
+    KERNEL_FILE=$(find "${CHROOT}/boot" -maxdepth 1 -type f \( -name 'vmlinuz*' -o -name 'Image*' \) | head -n 1 || true)
+    INITRAMFS_FILE=$(find "${CHROOT}/boot" -maxdepth 1 -type f \( -name 'initramfs*' -o -name 'initrd*' \) | head -n 1 || true)
+
+    [ -n "${KERNEL_FILE}" ] || {
+        echo "No kernel image found in ${CHROOT}/boot after extracting ${PMOS_KERNEL_APK_URL}" >&2
+        exit 1
+    }
+    [ -n "${INITRAMFS_FILE}" ] || {
+        echo "No initramfs found in ${CHROOT}/boot after extracting ${PMOS_KERNEL_APK_URL}" >&2
+        exit 1
+    }
+
+    ln -sfn "$(basename "${KERNEL_FILE}")" "${CHROOT}/boot/vmlinuz"
+    ln -sfn "boot/$(basename "${KERNEL_FILE}")" "${CHROOT}/vmlinuz"
+    ln -sfn "$(basename "${INITRAMFS_FILE}")" "${CHROOT}/boot/initramfs"
+    ln -sfn "boot/$(basename "${INITRAMFS_FILE}")" "${CHROOT}/initramfs"
 fi
 
 mkdir -p ${CHROOT}/boot/extlinux

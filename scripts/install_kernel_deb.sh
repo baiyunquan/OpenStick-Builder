@@ -12,7 +12,7 @@ need_cmd() {
 	}
 }
 
-for c in chroot dpkg-deb find install ln mkdir sort tail; do
+for c in depmod dpkg-deb find head install ln mkdir sort tail; do
 	need_cmd "$c"
 done
 
@@ -57,14 +57,10 @@ if [ -f "${BOOT_DIR}/vmlinuz-${KERNEL_RELEASE}" ]; then
 	ln -sf "vmlinuz-${KERNEL_RELEASE}" "${BOOT_DIR}/vmlinuz"
 fi
 
-chroot "${CHROOT}" /bin/sh -ec "
-	depmod '${KERNEL_RELEASE}'
-	if [ -f /boot/vmlinuz-${KERNEL_RELEASE} ] && command -v update-initramfs >/dev/null 2>&1; then
-		update-initramfs -c -k '${KERNEL_RELEASE}'
-		ln -sf 'boot/initrd.img-${KERNEL_RELEASE}' /initramfs
-		ln -sf 'initrd.img-${KERNEL_RELEASE}' /boot/initramfs
-	fi
-"
+# We boot with a prebuilt Android boot.img, so the rootfs only needs the
+# extracted modules/userspace bits from the .deb. Avoid chrooted initramfs
+# generation here; it is brittle in CI and unnecessary for this flow.
+depmod -b "${CHROOT}" "${KERNEL_RELEASE}"
 
 mkdir -p "${ROOT_DIR}/files"
 echo "${KERNEL_RELEASE}" > "${ROOT_DIR}/files/kernel-release.txt"

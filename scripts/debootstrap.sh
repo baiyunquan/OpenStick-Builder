@@ -65,13 +65,27 @@ if [ "${KERNEL_SOURCE}" = "pmos" ]; then
     # reliably find them even if the package naming changes across releases.
     KERNEL_FILE=$(find "${CHROOT}/boot" -maxdepth 1 -type f \( -name 'vmlinuz*' -o -name 'Image*' \) | head -n 1 || true)
     INITRAMFS_FILE=$(find "${CHROOT}/boot" -maxdepth 1 -type f \( -name 'initramfs*' -o -name 'initrd*' \) | head -n 1 || true)
+    KERNEL_RELEASE=$(find "${CHROOT}/lib/modules" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | tail -n 1 || true)
 
     [ -n "${KERNEL_FILE}" ] || {
         echo "No kernel image found in ${CHROOT}/boot after extracting ${PMOS_KERNEL_APK_URL}" >&2
         exit 1
     }
+    [ -n "${KERNEL_RELEASE}" ] || {
+        echo "No kernel modules found in ${CHROOT}/lib/modules after extracting ${PMOS_KERNEL_APK_URL}" >&2
+        exit 1
+    }
+
+    if [ -z "${INITRAMFS_FILE}" ]; then
+        chroot "${CHROOT}" /bin/sh -ec "
+            depmod '${KERNEL_RELEASE}'
+            update-initramfs -c -k '${KERNEL_RELEASE}'
+        "
+        INITRAMFS_FILE=$(find "${CHROOT}/boot" -maxdepth 1 -type f \( -name 'initramfs*' -o -name 'initrd*' \) | head -n 1 || true)
+    fi
+
     [ -n "${INITRAMFS_FILE}" ] || {
-        echo "No initramfs found in ${CHROOT}/boot after extracting ${PMOS_KERNEL_APK_URL}" >&2
+        echo "No initramfs found or generated in ${CHROOT}/boot for ${KERNEL_RELEASE}" >&2
         exit 1
     }
 

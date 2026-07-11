@@ -86,8 +86,8 @@ mkdir -p "$TMPDIR/rootfs"
 tar xpf rootfs.tgz -C "$TMPDIR/rootfs"
 
 # Create Android boot.img using the kernel and initramfs shipped in the rootfs.
-KERNEL=$(find "$TMPDIR/rootfs/boot" -maxdepth 1 -type f -name 'vmlinuz*' | head -n 1)
-INITRAMFS=$(find "$TMPDIR/rootfs/boot" -maxdepth 1 -type f -name 'initramfs*' | head -n 1)
+KERNEL=$(find -L "$TMPDIR/rootfs/boot" -maxdepth 1 -type f \( -name 'vmlinuz*' -o -name 'Image*' \) | sort | head -n 1)
+INITRAMFS=$(find -L "$TMPDIR/rootfs/boot" -maxdepth 1 -type f \( -name 'initramfs*' -o -name 'initrd*' \) | sort | head -n 1)
 
 [ -n "$KERNEL" ] || {
 	echo "Unable to find kernel under rootfs /boot" >&2

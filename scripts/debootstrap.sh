@@ -89,10 +89,16 @@ if [ "${KERNEL_SOURCE}" = "pmos" ]; then
         exit 1
     }
 
-    ln -sfn "$(basename "${KERNEL_FILE}")" "${CHROOT}/boot/vmlinuz"
-    ln -sfn "boot/$(basename "${KERNEL_FILE}")" "${CHROOT}/vmlinuz"
-    ln -sfn "$(basename "${INITRAMFS_FILE}")" "${CHROOT}/boot/initramfs"
-    ln -sfn "boot/$(basename "${INITRAMFS_FILE}")" "${CHROOT}/initramfs"
+    NORMALIZED_KERNEL="${CHROOT}/boot/vmlinuz-${KERNEL_RELEASE}"
+    NORMALIZED_INITRAMFS="${CHROOT}/boot/initramfs-${KERNEL_RELEASE}"
+
+    [ "${KERNEL_FILE}" = "${NORMALIZED_KERNEL}" ] || install -m 0644 "${KERNEL_FILE}" "${NORMALIZED_KERNEL}"
+    [ "${INITRAMFS_FILE}" = "${NORMALIZED_INITRAMFS}" ] || install -m 0644 "${INITRAMFS_FILE}" "${NORMALIZED_INITRAMFS}"
+
+    ln -sfn "$(basename "${NORMALIZED_KERNEL}")" "${CHROOT}/boot/vmlinuz"
+    ln -sfn "boot/$(basename "${NORMALIZED_KERNEL}")" "${CHROOT}/vmlinuz"
+    ln -sfn "$(basename "${NORMALIZED_INITRAMFS}")" "${CHROOT}/boot/initramfs"
+    ln -sfn "boot/$(basename "${NORMALIZED_INITRAMFS}")" "${CHROOT}/initramfs"
 fi
 
 mkdir -p ${CHROOT}/boot/extlinux

@@ -43,6 +43,7 @@ done
 
 TOTAL_SECTORS=7569375
 DISK_BYTES=$((TOTAL_SECTORS * 512))
+LAST_USABLE_LBA=$((TOTAL_SECTORS - 2))
 CDT_START=131072
 CDT_SIZE=4
 SBL1_START=262144
@@ -70,7 +71,8 @@ BOOT_SIZE=131072
 DEVINFO_START=657408
 DEVINFO_SIZE=2048
 ROOTFS_START=659456
-ROOTFS_SIZE=6909919
+ROOTFS_SIZE=6909918
+ROOTFS_END=$((ROOTFS_START + ROOTFS_SIZE - 1))
 
 ROOTFS_PARTUUID=A7AB80E8-E9D1-E8CD-F157-93F69B1D141E
 CMDLINE="earlycon root=PARTUUID=a7ab80e8-e9d1-e8cd-f157-93f69b1d141e no_framebuffer=true rw"
@@ -96,6 +98,11 @@ INITRAMFS=$(find -L "$TMPDIR/rootfs/boot" -maxdepth 1 -type f \( -name 'initramf
 }
 [ -n "$INITRAMFS" ] || {
 	echo "Unable to find initramfs under rootfs /boot" >&2
+	exit 1
+}
+
+[ "$ROOTFS_END" -le "$LAST_USABLE_LBA" ] || {
+	echo "Rootfs partition ends at LBA $ROOTFS_END, beyond last usable LBA $LAST_USABLE_LBA" >&2
 	exit 1
 }
 
@@ -131,7 +138,7 @@ label: gpt
 label-id: DB708ACF-2E04-8DE2-BAFE-30C9B26444C5
 unit: sectors
 first-lba: 34
-last-lba: $((TOTAL_SECTORS - 2))
+last-lba: $LAST_USABLE_LBA
 sector-size: 512
 
 ${FULL_IMG}1  : start=$CDT_START,      size=$CDT_SIZE,      type=A19F205F-CCD8-4B6D-8F1E-2D9BC24CFFB1, uuid=18285060-B8C8-7CF7-2823-FD5DD2956B88, name="cdt"

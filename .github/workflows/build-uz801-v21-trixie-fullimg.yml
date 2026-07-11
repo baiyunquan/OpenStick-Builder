@@ -53,6 +53,7 @@ jobs:
             files/uz801_v2.1_debian13_trixie_rootfs.img
             files/uz801_v2.1_debian13_trixie_gpt.txt
             files/uz801_v2.1_debian13_trixie_SHA256SUMS
+            files/merge_uz801_v21_fullimg.sh
             files/aboot.mbn
             files/hyp.mbn
             files/rpm.mbn

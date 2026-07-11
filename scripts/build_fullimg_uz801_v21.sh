@@ -1,5 +1,6 @@
 #!/bin/sh -e
 
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TMPDIR=$(mktemp -d)
 MNT=$(mktemp -d)
 
@@ -98,7 +99,8 @@ INITRAMFS=$(find -L "$TMPDIR/rootfs/boot" -maxdepth 1 -type f \( -name 'initramf
 	exit 1
 }
 
-mkbootimg \
+# Ubuntu Noble's mkbootimg imports GKI certificate helpers even when unused.
+PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}${ROOT_DIR}/tools/mkbootimg_compat" mkbootimg \
 	--kernel "$KERNEL" \
 	--ramdisk "$INITRAMFS" \
 	--base 0x80000000 \

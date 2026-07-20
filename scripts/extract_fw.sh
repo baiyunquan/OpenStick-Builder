@@ -41,7 +41,7 @@ dd if=${TMPDIR}/gpt.img bs=512 skip=350241 >> files/gpt_both0.bin
 # extract Qualcomm firmware from the repository-owned archive
 archive="${TMPDIR}/dragonboard-410c-bootloader-emmc-linux-176.zip"
 wget -P "${TMPDIR}" \
-    https://raw.githubusercontent.com/baiyunquan/OpenStick-Builder/dragonboard410c-fw-v1/firmware/dragonboard410c/dragonboard-410c-bootloader-emmc-linux-176.zip
+    https://raw.githubusercontent.com/baiyunquan/OpenStick-Builder/refs/heads/pmos-zhihe-ufi103s-v05/firmware/dragonboard410c/dragonboard-410c-bootloader-emmc-linux-176.zip
 echo "a37c4e82a970ae2350fcfc7180559caf1dc3928e7c169316fe4ab899b7d305ad  ${archive}" \
     | sha256sum -c -
 

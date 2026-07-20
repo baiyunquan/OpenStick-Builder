@@ -1,6 +1,7 @@
 *.raw
 *.bin
 *.zip
+!firmware/dragonboard410c/*.zip
 *.mbn
 *.tgz
 build

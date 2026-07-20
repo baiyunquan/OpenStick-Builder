@@ -13,7 +13,10 @@ jobs:
           submodules: true
 
       - name: Install dependencies
-        run: sudo sh -e scripts/install_deps.sh
+        run: |
+          sudo sh -e scripts/install_deps.sh
+          sudo apt-get update
+          sudo apt-get install -y gdisk mkbootimg
 
       - name: Build hyp and aboot firmware
         run: sudo sh -e scripts/build_hyp_aboot.sh
@@ -27,10 +30,7 @@ jobs:
       - name: Build gadget-tool
         run: sudo sh -e scripts/build_gt.sh
 
-      - name: Install full-image build dependencies
-        run: sudo apt-get update && sudo apt-get install -y gdisk mkbootimg
-
-      - name: Create FY_UZ801_V2.1 full image
+      - name: Build FY_UZ801_V2.1 full image
         run: sudo env IMAGE_BASENAME=uz801_v2.1_debian13_trixie sh -e scripts/build_fullimg_uz801_v21.sh
 
       - name: Upload artifacts

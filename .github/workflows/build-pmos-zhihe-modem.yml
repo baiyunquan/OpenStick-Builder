@@ -84,7 +84,6 @@ jobs:
           is_default_channel = False
           jobs = 4
           kernel = ufi001c
-          locale = C.UTF-8
           ssh_keys = False
           sudo_timer = False
           timezone = Asia/Shanghai

@@ -106,7 +106,11 @@ jobs:
 
       - name: Build split postmarketOS image
         run: |
-          pmbootstrap install --split --filesystem btrfs --password 147147
+          if ! pmbootstrap install --split --filesystem btrfs --password 147147; then
+            echo "==== pmbootstrap log.txt (last 300 lines) ===="
+            tail -n 300 "$PMB_WORK/log.txt" || true
+            exit 1
+          fi
           pmbootstrap export
 
       - name: Generate SIM DTB variants

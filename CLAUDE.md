@@ -54,9 +54,10 @@ node, and emits `-physical` / `-esim1` / `-esim2` variants.
 
 **The single biggest source of breakage is upstream pmaports, not this repo.**
 It tracks the `edge` channel, so an upstream commit can break CI on a day when
-nothing here changed. See [SOLUTION.md](SOLUTION.md) for a worked example
+nothing here changed. [SOLUTION.md](SOLUTION.md) is the worked example
 (2026-07-19 removal of `device-zhihe-generic-nonfree-firmware` broke every run
-for a week) and the full debugging recipe.
+for a week); [SKILLS.md](SKILLS.md) is the general playbook for "nothing changed
+here but CI broke" — read it before debugging a failing pmOS run.
 
 ### Rules of thumb
 
